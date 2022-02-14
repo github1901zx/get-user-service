@@ -1,0 +1,52 @@
+version: "3"
+services:
+  zookeeper:
+    container_name: "my-zookeeper"
+    image: zookeeper
+    restart: always
+    networks:
+      - project-networks
+    environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK-TIME: 2000
+    ports:
+     - "2181:2181"
+  kafka:
+    container_name: "my-kafak"
+    image: confluentinc/cp-kafka
+    restart: always
+    networks:
+      - project-networks
+    depends_on:
+      - zookeeper
+    ports:
+       - "29092:9092"
+    expose:
+      - "29092"
+    environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        ZK_SERVER: zookeeper:2181
+        KAFKA_ADVERTISED_HOST_NAME: kafka
+        KAFKA_LISTENERS: INSIDE://:29092,OUTSIDE://0.0.0.0:9092
+        KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:29092,OUTSIDE://localhost:9092
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+        KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+        MIN_INSYNC_REPLICAS: 2
+  get-user-service:
+    container_name: "get-user-service"
+    image: user-service-img-1
+    build:
+      context: user-service-img-1
+      dockerfile: Dockerfile
+    networks:
+      - project-networks
+    ports:
+      - "7766:9999"
+    expose:
+      - "9999"
+    restart: always
+    depends_on:
+      - kafka
+networks:
+  project-networks: {}

@@ -1,11 +1,13 @@
 package ru.example.getuserservice.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.example.getuserservice.model.User;
+import ru.example.getuserservice.services.KafkaProducerService;
 import ru.example.getuserservice.services.ParserJsonUserService;
 
 import java.io.IOException;
@@ -22,12 +24,12 @@ import java.util.Queue;
 public class UserController {
 
     private ParserJsonUserService parser;
+    private KafkaProducerService kafkaProducerService;
 
-    private Queue<User> queue = new ArrayDeque<>();
-    public UserController(ParserJsonUserService parser) {
+    public UserController(ParserJsonUserService parser, KafkaProducerService kafkaProducerService) {
         this.parser = parser;
+        this.kafkaProducerService = kafkaProducerService;
     }
-
 
     @GetMapping("/start")
     public ResponseEntity<ArrayList<User>> getUserRandomUserApi(@RequestParam(required = false) Integer results) throws IOException, InterruptedException {
@@ -39,7 +41,7 @@ public class UserController {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         ArrayList<User> users = parser.convertJsonToUser(response.body());
-
+        kafkaProducerService.sendUsersToKafka(users);
         return ResponseEntity.ok(users);
     }
 }
